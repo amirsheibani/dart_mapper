@@ -1,5 +1,9 @@
 ## 0.1.2
 
+* fix use package on other project and add build.yaml
+
+## 0.1.2
+
 * fix example
 
 ## 0.1.1
