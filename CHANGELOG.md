@@ -1,3 +1,7 @@
+## 0.1.1
+
+* change analyzer version
+
 ## 0.1.0
 
 * Initial release of `dart_mapper`.
