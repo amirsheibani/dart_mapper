@@ -14,6 +14,5 @@ targets:
         generate_for:
           include:
             - lib/**  # حتماً مطمئن شو فایل‌های lib داری
-            - example/lib/**
 
 
