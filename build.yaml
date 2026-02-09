@@ -1,15 +1,18 @@
 builders:
   mapper|mapperBuilder:
-    import: "package:dart_mapper_clean/src/mapper_generator.dart"
+    import: "package:dart_mapper_clean/builder.dart"
     builder_factories: ["mapperBuilder"]
     build_extensions: {".dart": [".mapper.dart"]}
     auto_apply: dependents
     build_to: source
+
 targets:
   $default:
     builders:
-      mapper:mapperBuilder:
+      dart_mapper_clean|mapperBuilder:
         enabled: true
         generate_for:
           include:
             - lib/**
+
+
