@@ -11,7 +11,8 @@ class UserMapperImpl extends UserMapper {
   @override
   UserEntity toEntity(UserModel value) {
     return UserEntity(
-      name: value.age.toString(),
+      id: value.id,
+      name: value.name,
       email: value.email,
       age: value.age,
       createdAt: value.createdAt,

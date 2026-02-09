@@ -1,6 +1,6 @@
 builders:
   mapper|mapperBuilder:
-    import: "package:dart_mapper/src/mapper_generator.dart"
+    import: "package:dart_mapper_clean/src/mapper_generator.dart"
     builder_factories: ["mapperBuilder"]
     build_extensions: {".dart": [".g.dart"]}
     auto_apply: dependents

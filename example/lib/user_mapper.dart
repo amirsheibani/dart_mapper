@@ -1,6 +1,6 @@
 import 'user_entity.dart';
 import 'user_model.dart';
-import 'package:dart_mapper/dart_mapper.dart';
+import 'package:dart_mapper_clean/dart_mapper_clean.dart';
 
 part 'user_mapper.g.dart';
 
