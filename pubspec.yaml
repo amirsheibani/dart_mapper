@@ -1,6 +1,6 @@
 name: dart_mapper_clean
 description: Code generator for mapping between Dart model classes using @Mapper-style annotations.
-version: 0.1.1
+version: 0.1.2
 
 homepage: https://pub.dev/packages/dart_mapper
 repository: https://github.com/amirsheibani/dart_mapper
