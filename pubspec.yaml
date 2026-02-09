@@ -1,20 +1,22 @@
 name: dart_mapper
-
 description: Code generator for mapping between Dart model classes using @Mapper-style annotations.
 version: 0.1.0
+
+homepage: https://pub.dev/packages/dart_mapper
+repository: https://github.com/amirsheibani/dart_mapper
+issue_tracker: https://github.com/amirsheibani/dart_mapper/issues
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
-  analyzer: ^10.0.1
-  build: ^4.0.4
-  source_gen: ^4.2.0
   collection: ^1.18.0
 
 dev_dependencies:
+  analyzer: ^10.0.1
+  build: ^4.0.4
+  source_gen: ^4.2.0
   build_runner: ^2.11.0
   lints: ^3.0.0
   test: ^1.25.0
-
 
