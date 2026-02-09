@@ -1,0 +1,9 @@
+targets:
+  $default:
+    builders:
+      dart_mapper_clean|mapperBuilder:
+        enabled: true
+        generate_for:
+          include:
+            - lib/**
+

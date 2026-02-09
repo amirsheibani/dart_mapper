@@ -1,9 +1,9 @@
 builders:
-  mapper|mapperBuilder:
+  dart_mapper_clean|mapperBuilder:
     import: "package:dart_mapper_clean/builder.dart"
     builder_factories: ["mapperBuilder"]
     build_extensions: {".dart": [".mapper.dart"]}
-    auto_apply: dependents
+    auto_apply: none
     build_to: source
 
 targets:
@@ -13,6 +13,7 @@ targets:
         enabled: true
         generate_for:
           include:
-            - lib/**
+            - lib/**  # حتماً مطمئن شو فایل‌های lib داری
+            - example/lib/**
 
 

@@ -190,6 +190,5 @@ class MapperGenerator extends GeneratorForAnnotation<Mapper> {
   }
 }
 
-Builder mapperBuilder(BuilderOptions options) => PartBuilder([MapperGenerator()], '.mapper.dart');
 
 
