@@ -6,9 +6,11 @@ import 'package:collection/collection.dart';
 import 'annotations.dart';
 
 class MapperGenerator extends GeneratorForAnnotation<Mapper> {
-  final _mappingChecker = TypeChecker.fromUrl('package:dart_mapper/src/annotations.dart#Mapping');
-  final _ignoreChecker = TypeChecker.fromUrl('package:dart_mapper/src/annotations.dart#Ignore');
-  final _customChecker = TypeChecker.fromUrl('package:dart_mapper/src/annotations.dart#CustomMapping');
+
+
+  final _mappingChecker = TypeChecker.fromUrl('package:dart_mapper_clean/src/annotations.dart#Mapping');
+  final _ignoreChecker = TypeChecker.fromUrl('package:dart_mapper_clean/src/annotations.dart#Ignore');
+  final _customChecker = TypeChecker.fromUrl('package:dart_mapper_clean/src/annotations.dart#CustomMapping');
 
   @override
   String generateForAnnotatedElement(covariant Element element, ConstantReader annotation, BuildStep buildStep) {
@@ -45,9 +47,9 @@ class MapperGenerator extends GeneratorForAnnotation<Mapper> {
     final targetType = method.returnType;
 
     buffer.writeln('  @override');
-    buffer.writeln('  ${targetType.getDisplayString(withNullability: true)} ${method.name}(${sourceType.getDisplayString(withNullability: true)} ${sourceParam.name}) {');
+    buffer.writeln('  ${targetType.getDisplayString()} ${method.name}(${sourceType.getDisplayString()} ${sourceParam.name}) {');
 
-    buffer.writeln('    return ${targetType.getDisplayString(withNullability: false)}(');
+    buffer.writeln('    return ${targetType.getDisplayString()}(');
 
     final targetParams = _getConstructorParams(targetType);
     final sourceFields = _getFields(sourceType);
@@ -93,12 +95,12 @@ class MapperGenerator extends GeneratorForAnnotation<Mapper> {
 
   /// Cast خودکار اگر نوع source با target متفاوت بود
   String _castIfNeeded(String sourceExpr, DartType sourceType, DartType targetType) {
-    final src = sourceType.getDisplayString(withNullability: true);
-    final tgt = targetType.getDisplayString(withNullability: true);
+    final src = sourceType.getDisplayString();
+    final tgt = targetType.getDisplayString();
 
     if (src == tgt) return sourceExpr;
 
-    final targetName = targetType.getDisplayString(withNullability: false);
+    final targetName = targetType.getDisplayString();
 
     // چند تبدیل رایج
     if (targetName == 'int') return 'int.parse($sourceExpr)';
@@ -110,29 +112,24 @@ class MapperGenerator extends GeneratorForAnnotation<Mapper> {
     return '$sourceExpr as $targetName';
   }
 
-  String? _getMappingAnnotation(MethodElement method, String? targetName) {
-    for (final annotation in _mappingChecker.annotationsOf(method)) {
-      final reader = ConstantReader(annotation);
-      final target = reader.read('target').stringValue;
-      final source = reader.read('source').stringValue;
-      if (target == targetName) return source;
-    }
-    return null;
-  }
-
   bool _hasIgnoreAnnotation(MethodElement method, String? targetName) {
     for (final annotation in _ignoreChecker.annotationsOf(method)) {
       final reader = ConstantReader(annotation);
-      // اگر target اختیاری است
       final peek = reader.peek('target');
-      if (peek != null) {
-        final target = peek.stringValue;
-        if (target == targetName) return true;
-      } else {
-        return true; // کل فیلد یا متد ignore شود
-      }
+      if (peek != null && peek.stringValue == targetName) return true;
+      if (peek == null) return true; // کل فیلد ignore شود
     }
     return false;
+  }
+
+  String? _getMappingAnnotation(MethodElement method, String? targetName) {
+    for (final annotation in _mappingChecker.annotationsOf(method)) {
+      final reader = ConstantReader(annotation);
+      final t = reader.read('target').stringValue;
+      final s = reader.read('source').stringValue;
+      if (t == targetName) return s;
+    }
+    return null;
   }
 
   String? _getCustomMappingAnnotation(MethodElement method, String? targetName) {
@@ -189,6 +186,4 @@ class MapperGenerator extends GeneratorForAnnotation<Mapper> {
     }
   }
 }
-
-
 

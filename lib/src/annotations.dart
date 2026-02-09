@@ -22,6 +22,7 @@ class Ignore {
 //@CustomMapping(target: 'email', expression: 'value.email.toUpperCase()')
 class CustomMapping {
   final String expression;
+  final String? target;
 
-  const CustomMapping({required this.expression});
+  const CustomMapping({required this.target ,required this.expression});
 }
