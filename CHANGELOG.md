@@ -1,4 +1,8 @@
-## 0.1.2
+## 0.1.4
+
+* fix annotations CustomMapping,Ignore,Mapping builder and casting
+
+## 0.1.3
 
 * fix use package on other project and add build.yaml
 
