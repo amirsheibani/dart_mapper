@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:source_gen/source_gen.dart';
@@ -6,28 +7,35 @@ import 'package:collection/collection.dart';
 import 'annotations.dart';
 
 class MapperGenerator extends GeneratorForAnnotation<Mapper> {
-
-
-  final _mappingChecker = TypeChecker.fromUrl('package:dart_mapper_clean/src/annotations.dart#Mapping');
-  final _ignoreChecker = TypeChecker.fromUrl('package:dart_mapper_clean/src/annotations.dart#Ignore');
-  final _customChecker = TypeChecker.fromUrl('package:dart_mapper_clean/src/annotations.dart#CustomMapping');
+  final _mappingChecker =
+  TypeChecker.fromUrl('package:dart_mapper_clean/src/annotations.dart#Mapping');
+  final _ignoreChecker =
+  TypeChecker.fromUrl('package:dart_mapper_clean/src/annotations.dart#Ignore');
+  final _customChecker =
+  TypeChecker.fromUrl('package:dart_mapper_clean/src/annotations.dart#CustomMapping');
 
   @override
-  String generateForAnnotatedElement(covariant Element element, ConstantReader annotation, BuildStep buildStep) {
+  String generateForAnnotatedElement(
+      covariant Element element,
+      ConstantReader annotation,
+      BuildStep buildStep) {
     if (element is! ClassElement) {
-      throw InvalidGenerationSourceError('@Mapper can only be used on classes', element: element);
+      throw InvalidGenerationSourceError(
+          '@Mapper can only be used on classes', element: element);
     }
     if (!element.isAbstract) {
-      throw InvalidGenerationSourceError('@Mapper class must be abstract', element: element);
+      throw InvalidGenerationSourceError(
+          '@Mapper class must be abstract', element: element);
     }
 
     final className = element.name;
-    final implName = '${className}Impl';
+    final implName =
+        annotation.peek('implementationName')?.stringValue ?? '${className}Impl';
     final buffer = StringBuffer();
+
     buffer.writeln('class $implName extends $className {');
 
     final methods = _getAllAbstractMethods(element).toList();
-
     for (final method in methods) {
       _generateMethod(buffer, method);
     }
@@ -39,136 +47,129 @@ class MapperGenerator extends GeneratorForAnnotation<Mapper> {
   void _generateMethod(StringBuffer buffer, MethodElement method) {
     final params = method.formalParameters;
     if (params.length != 1) {
-      throw InvalidGenerationSourceError('Mapper methods must have exactly one parameter', element: method);
+      throw InvalidGenerationSourceError(
+          'Mapper methods must have exactly one parameter',
+          element: method);
     }
 
     final sourceParam = params.first;
-    final sourceType = sourceParam.type;
+    final sourceFields = _getFields(sourceParam.type);
     final targetType = method.returnType;
+    final targetFields = _getFields(targetType);
 
-    buffer.writeln('  @override');
-    buffer.writeln('  ${targetType.getDisplayString()} ${method.name}(${sourceType.getDisplayString()} ${sourceParam.name}) {');
+    buffer.writeln(
+        '  @override ${targetType.getDisplayString()} ${method.name}(${sourceParam.type.getDisplayString()} ${sourceParam.name}) {');
 
-    buffer.writeln('    return ${targetType.getDisplayString()}(');
+    final constructorParams = <String>[];
 
-    final targetParams = _getConstructorParams(targetType);
-    final sourceFields = _getFields(sourceType);
+    for (final targetField in targetFields) {
+      if (_hasIgnoreAnnotation(targetField)) continue;
 
-    for (final param in targetParams) {
-      final targetName = _getTargetParamName(param);
+      // بررسی CustomMapping
+      final customExpr = _getCustomMappingAnnotation(targetField);
+      if (customExpr != null) {
+        constructorParams
+            .add('${targetField.name}: ${customExpr.replaceAll('value', sourceParam.name ?? '-')}');
+        continue;
+      }
 
-      final ignore = _hasIgnoreAnnotation(method, targetName);
-      if (ignore) continue;
+      // بررسی Mapping روی source fields
+      final mappedSourceField = sourceFields.firstWhereOrNull((f) {
+        final mapping = _mappingChecker.firstAnnotationOfExact(f);
+        if (mapping == null) return false;
+        final targetName =
+            ConstantReader(mapping).read('target').stringValue;
+        return targetName == targetField.name;
+      });
 
-      final custom = _getCustomMappingAnnotation(method, targetName);
       String value;
-
-      if (custom != null) {
-        value = custom;
+      if (mappedSourceField != null) {
+        value = _castIfNeeded(
+            '${sourceParam.name}.${mappedSourceField.name}',
+            mappedSourceField.type,
+            targetField.type);
       } else {
-        // mapping annotation
-        final mapping = _getMappingAnnotation(method, targetName);
-        FieldElement? field;
-        if (mapping != null) {
-          field = sourceFields.firstWhereOrNull((f) => f.name == mapping);
-        } else {
-          field = sourceFields.firstWhereOrNull((f) => f.name == param.name);
-        }
-
-        if (field != null) {
-          value = _castIfNeeded('${sourceParam.name}.${field.name}', field.type, param.type);
-        } else {
-          value = 'null';
-        }
+        // fallback: فیلد هم‌نام
+        final sameNameField =
+        sourceFields.firstWhereOrNull((f) => f.name == targetField.name);
+        value = sameNameField != null
+            ? _castIfNeeded(
+            '${sourceParam.name}.${sameNameField.name}',
+            sameNameField.type,
+            targetField.type)
+            : 'null';
       }
 
-      if (param.isNamed) {
-        buffer.writeln('      ${param.name}: $value,');
-      } else {
-        buffer.writeln('      $value,');
-      }
+      constructorParams.add('${targetField.name}: $value');
     }
 
-    buffer.writeln('    );');
+    buffer.writeln(
+        '    return ${targetType.getDisplayString()}(${constructorParams.join(', ')});');
     buffer.writeln('  }');
   }
 
-  /// Cast خودکار اگر نوع source با target متفاوت بود
-  String _castIfNeeded(String sourceExpr, DartType sourceType, DartType targetType) {
-    final src = sourceType.getDisplayString();
-    final tgt = targetType.getDisplayString();
-
-    if (src == tgt) return sourceExpr;
-
-    final targetName = targetType.getDisplayString();
-
-    // چند تبدیل رایج
-    if (targetName == 'int') return 'int.parse($sourceExpr)';
-    if (targetName == 'double') return 'double.parse($sourceExpr)';
-    if (targetName == 'String') return '$sourceExpr.toString()';
-    if (targetName == 'bool') return '$sourceExpr == true';
-
-    // fallback ساده
-    return '$sourceExpr as $targetName';
-  }
-
-  bool _hasIgnoreAnnotation(MethodElement method, String? targetName) {
-    for (final annotation in _ignoreChecker.annotationsOf(method)) {
+  bool _hasIgnoreAnnotation(FieldElement field) {
+    for (final annotation in _ignoreChecker.annotationsOf(field)) {
       final reader = ConstantReader(annotation);
       final peek = reader.peek('target');
-      if (peek != null && peek.stringValue == targetName) return true;
-      if (peek == null) return true; // کل فیلد ignore شود
+      if (peek == null || peek.stringValue == field.name) return true;
     }
     return false;
   }
 
-  String? _getMappingAnnotation(MethodElement method, String? targetName) {
-    for (final annotation in _mappingChecker.annotationsOf(method)) {
+  String? _getCustomMappingAnnotation(FieldElement field) {
+    for (final annotation in _customChecker.annotationsOf(field)) {
       final reader = ConstantReader(annotation);
-      final t = reader.read('target').stringValue;
-      final s = reader.read('source').stringValue;
-      if (t == targetName) return s;
-    }
-    return null;
-  }
-
-  String? _getCustomMappingAnnotation(MethodElement method, String? targetName) {
-    for (final annotation in _customChecker.annotationsOf(method)) {
-      final reader = ConstantReader(annotation);
-      final peek = reader.peek('target');
+      final peek = reader.peek('target')?.stringValue;
       final expr = reader.read('expression').stringValue;
-      if (peek != null) {
-        final target = peek.stringValue;
-        if (target == targetName) return expr;
-      }
+      if (peek == null || peek == field.name) return expr;
     }
     return null;
   }
 
-  String? _getTargetParamName(FormalParameterElement param) {
-    if (param is FieldFormalParameterElement) {
-      return param.field?.name ?? param.name;
-    }
-    return param.name;
-  }
+  String _castIfNeeded(
+      String sourceExpr, DartType sourceType, DartType targetType) {
+    final src = sourceType.getDisplayString();
+    final tgt = targetType.getDisplayString();
 
-  List<FormalParameterElement> _getConstructorParams(DartType type) {
-    if (type is! InterfaceType) return [];
-    final element = type.element;
-    if (element is! ClassElement) return [];
-    final ctor = _getUnnamedConstructor(element);
-    return ctor.formalParameters;
-  }
+    final isSourceNullable = sourceType.nullabilitySuffix != NullabilitySuffix.none;
+    final isTargetNullable = targetType.nullabilitySuffix != NullabilitySuffix.none;
 
-  ConstructorElement _getUnnamedConstructor(ClassElement element) {
-    final ctors = element.constructors;
-    if (ctors.isEmpty) {
-      throw InvalidGenerationSourceError('Target class must have at least one constructor', element: element);
+    if (src == tgt) return sourceExpr;
+
+    // String -> int
+    if (src == 'String' && tgt == 'int') {
+      return isTargetNullable
+          ? '$sourceExpr != null ? int.tryParse($sourceExpr!) : null'
+          : 'int.parse($sourceExpr)';
     }
-    for (final c in ctors) {
-      if (c.name?.isEmpty ?? false) return c;
+
+    // String -> double
+    if (src == 'String' && tgt == 'double') {
+      return isTargetNullable
+          ? '$sourceExpr != null ? double.tryParse($sourceExpr!) : null'
+          : 'double.parse($sourceExpr)';
     }
-    return ctors.first;
+
+    // int/double -> String
+    if ((src == 'int' || src == 'double') && tgt == 'String') {
+      return isSourceNullable ? '$sourceExpr?.toString()' : '$sourceExpr.toString()';
+    }
+
+    // bool -> String
+    if (src == 'bool' && tgt == 'String') {
+      return isSourceNullable ? '$sourceExpr?.toString()' : '$sourceExpr.toString()';
+    }
+
+    // String -> bool
+    if (src == 'String' && tgt == 'bool') {
+      return isSourceNullable
+          ? '$sourceExpr != null ? $sourceExpr == "true" : null'
+          : '$sourceExpr == "true"';
+    }
+
+    // fallback ساده
+    return '$sourceExpr as ${targetType.getDisplayString()}';
   }
 
   List<FieldElement> _getFields(DartType type) {
@@ -186,4 +187,3 @@ class MapperGenerator extends GeneratorForAnnotation<Mapper> {
     }
   }
 }
-

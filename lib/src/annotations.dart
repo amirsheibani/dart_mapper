@@ -1,28 +1,30 @@
+/// Annotation برای مشخص کردن یک Mapper
 class Mapper {
+  /// نام کلاس پیاده‌سازی، اگر null باشد نام پیش‌فرض استفاده می‌شود
   final String? implementationName;
 
   const Mapper({this.implementationName});
 }
 
-//@Mapping(target: 'name', source: 'age')
+/// Annotation برای mapping بین فیلدها
+/// اگر target مشخص شود، مقدار فیلد منبع با همان نام target گرفته می‌شود
 class Mapping {
-  final String source;
-  final String target;
+  final String? target;
 
-  const Mapping({required this.source, required this.target});
+  const Mapping({this.target});
 }
 
-//@Ignore(target: 'id')
+/// Annotation برای نادیده گرفتن یک فیلد
 class Ignore {
   final String? target;
 
   const Ignore({this.target});
 }
 
-//@CustomMapping(target: 'email', expression: 'value.email.toUpperCase()')
+/// Annotation برای mapping سفارشی با یک expression
 class CustomMapping {
   final String expression;
   final String? target;
 
-  const CustomMapping({required this.target ,required this.expression});
+  const CustomMapping({required this.target, required this.expression});
 }

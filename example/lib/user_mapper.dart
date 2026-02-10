@@ -6,9 +6,26 @@ part 'user_mapper.mapper.dart';
 
 @Mapper()
 abstract class UserMapper {
-  @Ignore(target: 'id')
-  @Mapping(target: 'name',source: 'age')
+
   UserEntity toEntity(UserModel value);
 
   UserModel toModel(UserEntity value);
 }
+
+
+
+
+
+
+// abstract class BaseMapper <E,M>{
+//   E toEntity(M value);
+//   M toModel(E value);
+// }
+//
+// @Mapper()
+// abstract class UserMapper extends BaseMapper<UserEntity,UserModel>{
+//   UserEntity toEntity(UserModel value);
+//
+//   UserModel toModel(UserEntity value);
+// }
+
