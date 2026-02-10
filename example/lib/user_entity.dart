@@ -6,4 +6,5 @@ class UserEntity {
   DateTime? createdAt;
 
   UserEntity({this.id, this.name, this.email, this.age, this.createdAt});
+
 }
