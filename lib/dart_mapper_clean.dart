@@ -2,3 +2,4 @@ library dart_mapper_clean;
 
 export 'src/annotations.dart';
 export 'src/converter.dart';
+export 'src/base_mapper.dart';
